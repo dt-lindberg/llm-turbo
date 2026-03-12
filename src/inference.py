@@ -60,7 +60,7 @@ if __name__ == "__main__":
     model, tokenizer = FastVisionModel.from_pretrained(
         model_name="unsloth/Qwen3.5-4B",
         max_seq_length=MAX_SEQ_LENGTH,
-        load_in_4bit=True,
+        load_in_4bit=False,
         token=HF_TOKEN,
     )
 
