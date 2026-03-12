@@ -18,3 +18,4 @@ dd7e514	0.000	crash	batch_size=256 - OOM at ~37GB (model 1.2GB + KV cache overfl
 a653af2	0.000	crash	batch_size=192 - OOM at ~39GB near end of generation
 00ff038	0.000	crash	batch_size=192 + expandable_segments - still genuine VRAM exhaustion
 7c796a8	0.000	crash	batch_size=512 MAX_TOKENS=500 - OOM (K~130KB/token, ~39.9GB needed)
+998002c	0.000	crash	batch_size=1024 MAX_TOKENS=100 - OOM during prefill (45.5GB alloc)

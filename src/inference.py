@@ -1,12 +1,14 @@
-"""Run Qwen3-0.6B with batched inference — amortize fixed per-step overhead."""
+"""Qwen3-0.6B: single-sample prefill + KV-expand for large batches.
+
+All prompts are identical, so we can prefill once for batch=1 and
+expand the resulting KV cache to any batch size. This avoids the
+large-batch prefill OOM while keeping large-batch decode throughput.
+"""
 
 import json
 import os
 import sys
 import time
-
-# Reduce CUDA allocator fragmentation — helps avoid OOM with growing KV cache
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import torch
 from dotenv import load_dotenv
@@ -19,9 +21,29 @@ load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 MAX_SEQ_LENGTH = 2048
-MAX_TOKENS = 2000
-BATCH_SIZE = 1024
-MAX_TOKENS = 100  # K~130KB/token; 1024*200*130KB + model = 27.8GB, safe on 40GB
+MAX_TOKENS = 100   # Short decode; VRAM = BATCH_SIZE*(prompt_len+100)*130KB
+BATCH_SIZE = 1024  # 1024*(100+100)*130KB + 1.2GB = 27.8GB — safe
+
+
+def expand_kv(kv, batch_size: int):
+    """Expand a batch-1 KV cache to batch_size.
+    Handles both tuple-of-tuples and DynamicCache."""
+    if isinstance(kv, tuple):
+        return tuple(
+            (
+                k.expand(batch_size, -1, -1, -1).contiguous(),
+                v.expand(batch_size, -1, -1, -1).contiguous(),
+            )
+            for k, v in kv
+        )
+    # DynamicCache (transformers ≥ 4.36)
+    kv.key_cache = [
+        k.expand(batch_size, -1, -1, -1).contiguous() for k in kv.key_cache
+    ]
+    kv.value_cache = [
+        v.expand(batch_size, -1, -1, -1).contiguous() for v in kv.value_cache
+    ]
+    return kv
 
 
 if __name__ == "__main__":
@@ -62,22 +84,22 @@ if __name__ == "__main__":
     single_inputs = tokenizer(
         text=input_text, add_special_tokens=False, return_tensors="pt"
     ).to("cuda")
-
-    # Duplicate prompt BATCH_SIZE times — same weights loaded, N tokens per step
-    inputs = {k: v.expand(BATCH_SIZE, -1).contiguous() for k, v in single_inputs.items()}
     prompt_len = single_inputs["input_ids"].shape[1]
 
-    log.info(f"Generating (batch_size={BATCH_SIZE})...")
+    log.info(f"Generating (batch_size={BATCH_SIZE}, max_tokens={MAX_TOKENS})...")
     t_gen_start = time.perf_counter()
 
     with torch.inference_mode():
-        # Prefill all batch items at once
-        out = model(**inputs, use_cache=True, return_dict=True)
-        past_kv = out.past_key_values
-        next_token = out.logits[:, -1:].argmax(dim=-1)  # [B, 1]
+        # Prefill with batch=1 — avoids large-batch prefill OOM
+        out = model(**single_inputs, use_cache=True, return_dict=True)
+        first_token = out.logits[:, -1:].argmax(dim=-1)  # [1, 1]
+
+        # Expand KV cache to BATCH_SIZE (all prompts identical)
+        past_kv = expand_kv(out.past_key_values, BATCH_SIZE)
+        next_token = first_token.expand(BATCH_SIZE, -1).contiguous()  # [B, 1]
         new_token_ids = [next_token]
 
-        # Pre-build position_ids for decode steps (same for all batch items)
+        # Pre-build position_ids for all decode steps on GPU
         all_position_ids = (
             torch.arange(prompt_len, prompt_len + MAX_TOKENS, device="cuda")
             .view(1, -1)
@@ -85,7 +107,7 @@ if __name__ == "__main__":
             .contiguous()
         )
 
-        # Decode loop — BATCH_SIZE tokens per step, same overhead cost
+        # Decode loop — BATCH_SIZE tokens per step
         for step in range(MAX_TOKENS - 1):
             out = model(
                 input_ids=next_token,
@@ -95,17 +117,15 @@ if __name__ == "__main__":
                 return_dict=True,
             )
             past_kv = out.past_key_values
-            next_token = out.logits[:, -1:].argmax(dim=-1)  # [B, 1]
+            next_token = out.logits[:, -1:].argmax(dim=-1)
             new_token_ids.append(next_token)
 
     torch.cuda.synchronize()
     t_gen = time.perf_counter() - t_gen_start
 
-    # Count all generated tokens across the full batch
     all_tokens = torch.cat(new_token_ids, dim=1)  # [B, MAX_TOKENS]
     n_tokens = int(all_tokens.numel())
 
-    # Decode first sequence for display
     response_text = tokenizer.decode(all_tokens[0].tolist(), skip_special_tokens=True)
     print(response_text, flush=True)
 
