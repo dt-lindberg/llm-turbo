@@ -45,6 +45,9 @@ if __name__ == "__main__":
     model_path = hf_hub_download(repo_id=REPO_ID, filename=filename, token=HF_TOKEN)
     log.info(f"Model path: {model_path}")
 
+    # CUDA graphs amortize kernel launch overhead (key bottleneck for MoE at batch=1)
+    os.environ["GGML_CUDA_ENABLE_GRAPHS"] = "1"
+
     from llama_cpp import Llama
 
     t_load_start = time.perf_counter()
@@ -52,7 +55,6 @@ if __name__ == "__main__":
         model_path=model_path,
         n_gpu_layers=-1,  # all layers on GPU
         n_ctx=N_CTX,
-        flash_attn=True,
         verbose=False,
     )
     t_load = time.perf_counter() - t_load_start
