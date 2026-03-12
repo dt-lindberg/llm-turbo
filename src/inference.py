@@ -65,7 +65,8 @@ if __name__ == "__main__":
 
     with torch.inference_mode():
         # Prefill: process prompt, get first token
-        out = model(**inputs, use_cache=True)
+        # return_dict=True ensures CausalLMOutputWithPast (not a plain tuple)
+        out = model(**inputs, use_cache=True, return_dict=True)
         past_kv = out.past_key_values
         next_token = out.logits[:, -1:].argmax(dim=-1)  # [1,1] — stays on GPU
         new_token_ids = [next_token]
@@ -83,6 +84,7 @@ if __name__ == "__main__":
                 past_key_values=past_kv,
                 position_ids=all_position_ids[:, step : step + 1],
                 use_cache=True,
+                return_dict=True,
             )
             past_kv = out.past_key_values
             next_token = out.logits[:, -1:].argmax(dim=-1)
