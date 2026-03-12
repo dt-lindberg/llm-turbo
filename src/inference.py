@@ -20,8 +20,8 @@ load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 MAX_SEQ_LENGTH = 2048
 MAX_TOKENS = 2000
-BATCH_SIZE = 512
-MAX_TOKENS = 500  # Fewer tokens per seq → larger batch → same VRAM, more tok/s
+BATCH_SIZE = 1024
+MAX_TOKENS = 100  # K~130KB/token; 1024*200*130KB + model = 27.8GB, safe on 40GB
 
 
 if __name__ == "__main__":
