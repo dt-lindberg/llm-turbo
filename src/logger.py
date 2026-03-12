@@ -7,13 +7,20 @@ import sys
 
 def get_logger(name: str) -> logging.Logger:
     os.makedirs("outputs", exist_ok=True)
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(message)s",
-        datefmt="%H:%M:%S",
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler(f"outputs/{name}.log"),
-        ],
+    formatter = logging.Formatter("%(asctime)s %(message)s", datefmt="%H:%M:%S")
+
+    file_handler = logging.FileHandler(f"outputs/{name}.log")
+    file_handler.setFormatter(formatter)
+    file_handler.addFilter(lambda r: r.name == "inference")
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(formatter)
+
+    logger = logging.getLogger("inference")
+    logger.setLevel(logging.INFO)
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+    logger.propagate = (
+        False  # don't pass to root logger (already claimed by unsloth/transformers)
     )
-    return logging.getLogger()
+    return logger
