@@ -15,7 +15,8 @@ from prompt import SYSTEM, USER
 load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
-REPO_ID = "unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF"
+# Qwen3-Coder-Next: 80B total / 3B active MoE — biggest feasible model on A100 40GB
+REPO_ID = "unsloth/Qwen3-Coder-Next-GGUF"
 MAX_TOKENS = 2000
 N_CTX = 4096
 
@@ -35,18 +36,23 @@ if __name__ == "__main__":
     else:
         raise RuntimeError("CUDA not available")
 
-    # Find the Q4_K_M GGUF file (single-part preferred, else first shard)
+    # Find the best-fitting GGUF: Q4_K_M for ~30B models, Q3_K_M for 80B (fits 40GB GPU)
     all_files = sorted(list_repo_files(REPO_ID, token=HF_TOKEN))
-    q4_files = [f for f in all_files if "Q4_K_M" in f and f.endswith(".gguf")]
-    single = [f for f in q4_files if "-of-" not in f]
-    filename = single[0] if single else q4_files[0]
+    for quant in ["Q4_K_M", "Q3_K_M", "Q3_K_S", "IQ3_XS", "Q2_K"]:
+        candidates = [f for f in all_files if quant in f and f.endswith(".gguf")]
+        single = [f for f in candidates if "-of-" not in f]
+        if single:
+            filename = single[0]
+            break
+        elif candidates:
+            filename = candidates[0]  # first shard of multi-part
+            break
+    else:
+        raise RuntimeError(f"No suitable GGUF found in {REPO_ID}")
     log.info(f"Downloading: {filename}")
 
     model_path = hf_hub_download(repo_id=REPO_ID, filename=filename, token=HF_TOKEN)
     log.info(f"Model path: {model_path}")
-
-    # CUDA graphs amortize kernel launch overhead (key bottleneck for MoE at batch=1)
-    os.environ["GGML_CUDA_ENABLE_GRAPHS"] = "1"
 
     from llama_cpp import Llama
 

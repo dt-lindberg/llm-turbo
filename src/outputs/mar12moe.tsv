@@ -2,3 +2,5 @@ commit	tk_s	status	description
 817343f	0	crash	HF transformers NF4 4-bit Qwen3-30B-A3B: device_map=auto dispatched to CPU (bitsandbytes refuses CPU offload)
 65e61aa	0	crash	HF transformers NF4 4-bit Qwen3-30B-A3B: device_map=cuda:0 OOM — BF16 materialization fills 40GB before quantizing
 f709f31	91.22	keep	Baseline: Qwen3-30B-A3B Q4_K_M GGUF via llama-cpp-python GPU offload — 18.7GB VRAM used, decode 108 tok/s internal
+0dfa73c	82.20	discard	flash_attn=True: slower (model hit max_tokens=2000, FP diff changed outputs)
+4eba20f	91.55	discard	GGML_CUDA_ENABLE_GRAPHS=1: no improvement, kernel launch overhead not the binding constraint
