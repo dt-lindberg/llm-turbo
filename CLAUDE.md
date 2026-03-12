@@ -81,7 +81,7 @@ The experiment runs on a dedicated branch (e.g. `autoresearch/mar5`).
 2. Tune `src/inference.py` with an experimental idea by directly hacking the code.
 3. `git commit` your changes.
 4. Run the experiment: `sbatch src/01_run.job`.
-5. Monitor the run: `jlog <job_id>`, do NOT monitor or read the raw (stdout) of runs, do NOT let redundant information flood your context. Optionally, 
+5. Monitor the run: `jlog <job_id>`, do NOT monitor or read the raw (stdout) of runs, do NOT let redundant information flood your context.
 6. Check the results in `outputs/<job_id>.json` and record them in the `.tsv` file.
 7. If the score (tokens/s) improves, you 'advance' the branch by keeping the commit.
 8. If the score (tokens/s) decreases, revert the changes you made to the code (keep record of results!).
