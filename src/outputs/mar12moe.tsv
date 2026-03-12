@@ -1,0 +1,3 @@
+commit	tk_s	status	description
+817343f	0	crash	HF transformers NF4 4-bit Qwen3-30B-A3B: device_map=auto dispatched to CPU (bitsandbytes refuses CPU offload)
+65e61aa	0	crash	HF transformers NF4 4-bit Qwen3-30B-A3B: device_map=cuda:0 OOM — BF16 materialization fills 40GB before quantizing
