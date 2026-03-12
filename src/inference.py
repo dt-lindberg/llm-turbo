@@ -19,8 +19,8 @@ from prompt import SYSTEM, USER
 load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
-REPO_ID = "TheBloke/Mixtral-8x7B-Instruct-v0.1-GGUF"
-MODEL_FILE = "mixtral-8x7b-instruct-v0.1.Q4_K_M.gguf"
+REPO_ID = "MaziyarPanahi/Mixtral-8x7B-Instruct-v0.1-GGUF"
+MODEL_FILE = "Mixtral-8x7B-Instruct-v0.1.Q4_K_M.gguf"
 MAX_TOKENS = 2000
 N_CTX = 4096
 
