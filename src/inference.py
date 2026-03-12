@@ -70,9 +70,20 @@ if __name__ == "__main__":
         next_token = out.logits[:, -1:].argmax(dim=-1)  # [1,1] — stays on GPU
         new_token_ids = [next_token]
 
+        prompt_len = inputs["input_ids"].shape[1]
+        # Pre-build position_ids for all decode steps on GPU (avoid per-step CPU work)
+        all_position_ids = torch.arange(
+            prompt_len, prompt_len + MAX_TOKENS, device="cuda"
+        ).view(1, -1)  # [1, MAX_TOKENS]
+
         # Decode: accumulate tokens on GPU without CPU sync
-        for _ in range(MAX_TOKENS - 1):
-            out = model(input_ids=next_token, past_key_values=past_kv, use_cache=True)
+        for step in range(MAX_TOKENS - 1):
+            out = model(
+                input_ids=next_token,
+                past_key_values=past_kv,
+                position_ids=all_position_ids[:, step : step + 1],
+                use_cache=True,
+            )
             past_kv = out.past_key_values
             next_token = out.logits[:, -1:].argmax(dim=-1)
             new_token_ids.append(next_token)
