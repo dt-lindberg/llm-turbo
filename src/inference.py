@@ -15,8 +15,8 @@ from prompt import SYSTEM, USER
 load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
-# Qwen3-Coder-Next: 80B total / 3B active MoE — biggest feasible model on A100 40GB
-REPO_ID = "unsloth/Qwen3-Coder-Next-GGUF"
+# GLM-4.7-Flash: 30B total / 3B active MoE, standard transformer arch (llama.cpp compatible)
+REPO_ID = "unsloth/GLM-4.7-Flash-GGUF"
 MAX_TOKENS = 2000
 N_CTX = 4096
 
@@ -36,10 +36,9 @@ if __name__ == "__main__":
     else:
         raise RuntimeError("CUDA not available")
 
-    # Q3_K_M (35.7GB) is the largest that fits in A100 40GB for 80B models
-    # Try Q3 variants first, then fall back to smaller quantizations
+    # For 30B MoE models: Q4_K_M (~17GB) fits comfortably in A100 40GB
     all_files = sorted(list_repo_files(REPO_ID, token=HF_TOKEN))
-    for quant in ["Q3_K_M", "Q3_K_S", "IQ3_XS", "Q2_K"]:
+    for quant in ["Q4_K_M", "Q3_K_M", "Q3_K_S", "IQ4_XS", "Q2_K"]:
         candidates = [f for f in all_files if quant in f and f.endswith(".gguf")]
         single = [f for f in candidates if "-of-" not in f]
         if single:
