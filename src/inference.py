@@ -1,4 +1,4 @@
-"""Run Qwen3.5-4B inference locally using Unsloth."""
+"""Run Qwen3.5-4B inference using vLLM for maximum throughput."""
 
 import json
 import os
@@ -6,7 +6,8 @@ import sys
 import time
 
 from dotenv import load_dotenv
-from unsloth import FastVisionModel
+from vllm import LLM, SamplingParams
+from transformers import AutoTokenizer
 
 from logger import get_logger
 from prompt import SYSTEM, USER
@@ -15,23 +16,8 @@ load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 TEMPERATURE = 0.6  # Recommended @ https://unsloth.ai/docs/models/qwen3.5
-MAX_SEQ_LENGTH = 2000
 MAX_TOKENS = 2000
-
-
-def format_message_for_vision(messages: list[dict]) -> list[dict]:
-    """Convert plain-string message content to the vision-compatible format
-    (list of typed dicts) that the Qwen3.5 processor expects."""
-    formatted = []
-    for msg in messages:
-        content = msg["content"]
-        if isinstance(content, str):
-            formatted.append(
-                {"role": msg["role"], "content": [{"type": "text", "text": content}]}
-            )
-        else:
-            formatted.append(msg)
-    return formatted
+MODEL = "Qwen/Qwen3.5-4B"
 
 
 if __name__ == "__main__":
@@ -44,7 +30,6 @@ if __name__ == "__main__":
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
 
-    # Sanity-check environment
     import torch
 
     log.info(f"Torch: {torch.__version__}  CUDA: {torch.cuda.is_available()}")
@@ -54,52 +39,44 @@ if __name__ == "__main__":
     else:
         raise RuntimeError("CUDA not available — model will fall back to CPU")
 
-    # Load model with Unsloth — 4-bit quantization for reduced VRAM usage
-    # Qwen3.5 is always a vision model, so we use FastVisionModel
+    # Load model with vLLM (PagedAttention + CUDA graphs)
     t_load_start = time.perf_counter()
-    model, tokenizer = FastVisionModel.from_pretrained(
-        model_name="unsloth/Qwen3.5-4B",
-        max_seq_length=MAX_SEQ_LENGTH,
-        load_in_4bit=False,
-        token=HF_TOKEN,
+    llm = LLM(
+        model=MODEL,
+        dtype="bfloat16",
+        gpu_memory_utilization=0.90,
+        max_model_len=4096,
     )
-
-    # Enable Unsloth's native 2x faster inference
-    FastVisionModel.for_inference(model)
     t_load = time.perf_counter() - t_load_start
     log.info(f"Model loaded in {t_load:.2f}s")
 
+    # Apply chat template
+    tokenizer = AutoTokenizer.from_pretrained(MODEL)
     messages = [
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": USER},
     ]
-    vision_messages = format_message_for_vision(messages)
-    input_text = tokenizer.apply_chat_template(
-        vision_messages, add_generation_prompt=True
+    prompt = tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True
     )
-    inputs = tokenizer(
-        text=input_text,
-        add_special_tokens=False,
-        return_tensors="pt",
-    ).to("cuda")
 
-    log.info("Generating...")
-    t_gen_start = time.perf_counter()
-    generated = model.generate(
-        **inputs,
-        max_new_tokens=MAX_TOKENS,
+    sampling_params = SamplingParams(
         temperature=TEMPERATURE,
         top_p=0.95,
         top_k=20,
-        use_cache=True,
+        max_tokens=MAX_TOKENS,
     )
+
+    log.info("Generating...")
+    t_gen_start = time.perf_counter()
+    outputs = llm.generate([prompt], sampling_params)
     t_gen = time.perf_counter() - t_gen_start
 
-    new_tokens = generated[0][inputs["input_ids"].shape[-1] :]
-    n_tokens = len(new_tokens)
-    response_text = tokenizer.decode(new_tokens, skip_special_tokens=True)
+    output = outputs[0].outputs[0]
+    n_tokens = len(output.token_ids)
+    response_text = output.text
 
-    print(response_text, flush=True)  # response to stdout only
+    print(response_text, flush=True)
 
     log.info(
         f"Generated {n_tokens} tokens in {t_gen:.2f}s ({n_tokens / t_gen:.2f} tok/s)"

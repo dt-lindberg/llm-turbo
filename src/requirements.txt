@@ -15,5 +15,8 @@ unsloth_zoo
 transformers==5.2.0
 
 
+# vLLM for fast inference (PagedAttention + CUDA graphs)
+vllm
+
 # Utilities
 python-dotenv==1.2.2
