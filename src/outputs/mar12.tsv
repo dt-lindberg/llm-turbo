@@ -6,3 +6,6 @@ f74c3ea	0.000	crash	vLLM - install failed (numba incompatible with Python 3.13)
 b81616e	23.89	keep	FastLanguageModel + Qwen3-4B (pure text) - no vision overhead
 211c3a6	32.61	keep	Qwen3-0.6B - smaller model, less memory bandwidth per token
 4752890	33.59	discard	greedy decoding - barely faster, not the bottleneck
+d142687	0.000	crash	custom loop - Unsloth needs explicit position_ids (fixed next)
+4e75e9c	0.000	crash	custom loop - Unsloth returns tuple not CausalLMOutputWithPast (fixed next)
+18b29e6	34.34	keep	custom loop with return_dict=True + position_ids - slight improvement

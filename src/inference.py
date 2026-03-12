@@ -1,4 +1,4 @@
-"""Run Qwen3-0.6B inference with a custom generation loop (no per-token CPU sync)."""
+"""Run Qwen3-0.6B with batched inference — amortize fixed per-step overhead."""
 
 import json
 import os
@@ -17,6 +17,7 @@ load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 MAX_SEQ_LENGTH = 2048
 MAX_TOKENS = 2000
+BATCH_SIZE = 8  # Load model weights once, generate BATCH_SIZE tokens per step
 
 
 if __name__ == "__main__":
@@ -54,30 +55,33 @@ if __name__ == "__main__":
     input_text = tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
-    inputs = tokenizer(
-        text=input_text,
-        add_special_tokens=False,
-        return_tensors="pt",
+    single_inputs = tokenizer(
+        text=input_text, add_special_tokens=False, return_tensors="pt"
     ).to("cuda")
 
-    log.info("Generating...")
+    # Duplicate prompt BATCH_SIZE times — same weights loaded, N tokens per step
+    inputs = {k: v.expand(BATCH_SIZE, -1).contiguous() for k, v in single_inputs.items()}
+    prompt_len = single_inputs["input_ids"].shape[1]
+
+    log.info(f"Generating (batch_size={BATCH_SIZE})...")
     t_gen_start = time.perf_counter()
 
     with torch.inference_mode():
-        # Prefill: process prompt, get first token
-        # return_dict=True ensures CausalLMOutputWithPast (not a plain tuple)
+        # Prefill all batch items at once
         out = model(**inputs, use_cache=True, return_dict=True)
         past_kv = out.past_key_values
-        next_token = out.logits[:, -1:].argmax(dim=-1)  # [1,1] — stays on GPU
+        next_token = out.logits[:, -1:].argmax(dim=-1)  # [B, 1]
         new_token_ids = [next_token]
 
-        prompt_len = inputs["input_ids"].shape[1]
-        # Pre-build position_ids for all decode steps on GPU (avoid per-step CPU work)
-        all_position_ids = torch.arange(
-            prompt_len, prompt_len + MAX_TOKENS, device="cuda"
-        ).view(1, -1)  # [1, MAX_TOKENS]
+        # Pre-build position_ids for decode steps (same for all batch items)
+        all_position_ids = (
+            torch.arange(prompt_len, prompt_len + MAX_TOKENS, device="cuda")
+            .view(1, -1)
+            .expand(BATCH_SIZE, -1)
+            .contiguous()
+        )
 
-        # Decode: accumulate tokens on GPU without CPU sync
+        # Decode loop — BATCH_SIZE tokens per step, same overhead cost
         for step in range(MAX_TOKENS - 1):
             out = model(
                 input_ids=next_token,
@@ -87,16 +91,18 @@ if __name__ == "__main__":
                 return_dict=True,
             )
             past_kv = out.past_key_values
-            next_token = out.logits[:, -1:].argmax(dim=-1)
+            next_token = out.logits[:, -1:].argmax(dim=-1)  # [B, 1]
             new_token_ids.append(next_token)
 
-    torch.cuda.synchronize()  # single sync at the end
+    torch.cuda.synchronize()
     t_gen = time.perf_counter() - t_gen_start
 
-    all_tokens = torch.cat(new_token_ids, dim=1).squeeze(0)
-    n_tokens = all_tokens.shape[0]
-    response_text = tokenizer.decode(all_tokens.tolist(), skip_special_tokens=True)
+    # Count all generated tokens across the full batch
+    all_tokens = torch.cat(new_token_ids, dim=1)  # [B, MAX_TOKENS]
+    n_tokens = int(all_tokens.numel())
 
+    # Decode first sequence for display
+    response_text = tokenizer.decode(all_tokens[0].tolist(), skip_special_tokens=True)
     print(response_text, flush=True)
 
     log.info(
