@@ -104,6 +104,7 @@ if __name__ == "__main__":
         n_ctx=N_CTX,
         verbose=False,
         draft_model=draft_model,
+        logits_all=True,  # draft_model sets _logits_all=True internally but scores buffer defaults to (n_batch,vocab); pass explicitly to size it (n_ctx,vocab)
     )
     t_load = time.perf_counter() - t_load_start
     log.info(f"Target model loaded in {t_load:.2f}s")
