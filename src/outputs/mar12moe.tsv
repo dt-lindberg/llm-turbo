@@ -1,3 +1,4 @@
 commit	tk_s	status	description
 817343f	0	crash	HF transformers NF4 4-bit Qwen3-30B-A3B: device_map=auto dispatched to CPU (bitsandbytes refuses CPU offload)
 65e61aa	0	crash	HF transformers NF4 4-bit Qwen3-30B-A3B: device_map=cuda:0 OOM — BF16 materialization fills 40GB before quantizing
+f709f31	91.22	keep	Baseline: Qwen3-30B-A3B Q4_K_M GGUF via llama-cpp-python GPU offload — 18.7GB VRAM used, decode 108 tok/s internal

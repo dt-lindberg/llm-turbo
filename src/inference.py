@@ -52,6 +52,7 @@ if __name__ == "__main__":
         model_path=model_path,
         n_gpu_layers=-1,  # all layers on GPU
         n_ctx=N_CTX,
+        flash_attn=True,
         verbose=False,
     )
     t_load = time.perf_counter() - t_load_start
