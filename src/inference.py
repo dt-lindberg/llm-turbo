@@ -1,12 +1,13 @@
-"""Run Qwen3.5-4B inference locally using Unsloth."""
+"""Qwen3-30B-A3B-Instruct-2507 MoE inference via HuggingFace transformers."""
 
 import json
 import os
 import sys
 import time
 
+import torch
 from dotenv import load_dotenv
-from unsloth import FastVisionModel
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from logger import get_logger
 from prompt import SYSTEM, USER
@@ -14,25 +15,8 @@ from prompt import SYSTEM, USER
 load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
-TEMPERATURE = 0.6  # Recommended @ https://unsloth.ai/docs/models/qwen3.5
-MAX_SEQ_LENGTH = 2000
-MAX_TOKENS = 2000
-
-
-def format_message_for_vision(messages: list[dict]) -> list[dict]:
-    """Convert plain-string message content to the vision-compatible format
-    (list of typed dicts) that the Qwen3.5 processor expects."""
-    formatted = []
-    for msg in messages:
-        content = msg["content"]
-        if isinstance(content, str):
-            formatted.append(
-                {"role": msg["role"], "content": [{"type": "text", "text": content}]}
-            )
-        else:
-            formatted.append(msg)
-    return formatted
-
+MODEL_NAME = "Qwen/Qwen3-30B-A3B-Instruct-2507"
+MAX_NEW_TOKENS = 2000
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -44,66 +28,55 @@ if __name__ == "__main__":
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
 
-    # Sanity-check environment
-    import torch
-
     log.info(f"Torch: {torch.__version__}  CUDA: {torch.cuda.is_available()}")
     if torch.cuda.is_available():
         props = torch.cuda.get_device_properties(0)
         log.info(f"GPU: {props.name}  VRAM: {props.total_memory / 1024**3:.2f} GB")
     else:
-        raise RuntimeError("CUDA not available — model will fall back to CPU")
+        raise RuntimeError("CUDA not available")
 
-    # Load model with Unsloth — 4-bit quantization for reduced VRAM usage
-    # Qwen3.5 is always a vision model, so we use FastVisionModel
-    t_load_start = time.perf_counter()
-    model, tokenizer = FastVisionModel.from_pretrained(
-        model_name="unsloth/Qwen3.5-4B",
-        max_seq_length=MAX_SEQ_LENGTH,
+    bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
-        token=HF_TOKEN,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
     )
 
-    # Enable Unsloth's native 2x faster inference
-    FastVisionModel.for_inference(model)
+    t_load_start = time.perf_counter()
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, token=HF_TOKEN)
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_NAME,
+        quantization_config=bnb_config,
+        device_map="auto",
+        token=HF_TOKEN,
+    )
+    model.eval()
     t_load = time.perf_counter() - t_load_start
     log.info(f"Model loaded in {t_load:.2f}s")
 
-    messages = [
-        {"role": "system", "content": SYSTEM},
-        {"role": "user", "content": USER},
-    ]
-    vision_messages = format_message_for_vision(messages)
-    input_text = tokenizer.apply_chat_template(
-        vision_messages, add_generation_prompt=True
-    )
-    inputs = tokenizer(
-        text=input_text,
-        add_special_tokens=False,
-        return_tensors="pt",
-    ).to("cuda")
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": USER}]
+    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    inputs = tokenizer(text, return_tensors="pt").to("cuda")
+    prompt_len = inputs["input_ids"].shape[-1]
+    log.info(f"Prompt tokens: {prompt_len}")
 
     log.info("Generating...")
     t_gen_start = time.perf_counter()
-    generated = model.generate(
-        **inputs,
-        max_new_tokens=MAX_TOKENS,
-        temperature=TEMPERATURE,
-        top_p=0.95,
-        top_k=20,
-        use_cache=True,
-    )
+    with torch.no_grad():
+        generated = model.generate(
+            **inputs,
+            max_new_tokens=MAX_NEW_TOKENS,
+            do_sample=False,
+            use_cache=True,
+        )
     t_gen = time.perf_counter() - t_gen_start
 
-    new_tokens = generated[0][inputs["input_ids"].shape[-1] :]
+    new_tokens = generated[0][prompt_len:]
     n_tokens = len(new_tokens)
     response_text = tokenizer.decode(new_tokens, skip_special_tokens=True)
+    print(response_text, flush=True)
 
-    print(response_text, flush=True)  # response to stdout only
-
-    log.info(
-        f"Generated {n_tokens} tokens in {t_gen:.2f}s ({n_tokens / t_gen:.2f} tok/s)"
-    )
+    log.info(f"Generated {n_tokens} tokens in {t_gen:.2f}s ({n_tokens / t_gen:.2f} tok/s)")
     log.info(f"Model load time: {t_load:.2f}s")
 
     result = {
