@@ -13,13 +13,14 @@ Once you get confirmation, kick off the experimentation.
 
 ## Experimentation
 Each experiment runs on a single Nvidia A100 (40GB) GPU with access to 16 CPU cores. The script runs for a **fixed time budget of 10 minutes** (wall clock time, including startup/compilation). You launch it simply as: `sbatch src/01_run.job`.
+* Note: sometimes it takes a bit of time for the job to *actually start*, as there might be a queue for the GPUs. This does NOT count towards the 10 minutes.
 
-**What you CAN do:**
+### What you CAN do
 - Modify `src/inference.py` — this is the only file you edit. Everything is fair game: choice of model (must fit on provided GPU), inference provider (plain HuggingFace/Unsloth/vLLM), hyperparameters, existing or custom optimizations like flash-attention-2, etc.
 - Install new dependencies (**15 minute limit!**). Just update `src/requirements.txt` and sbatch `src/00_install_env.job`. Make sure to not let pip use cached packages and be careful with dependencies overwriting existing versions.
 - Search the web for (recent) information and documentation.
 
-**What you CANNOT do:**
+### What you CANNOT do
 - Change the prompt the LLMs are running on. It is defined in `src/prompt.py` changing this file disqualifies a run.
 - Modify the evaluation harness. **Every run must write** `{"total_tokens": int, "generation_time": float, "tokens_per_second": float}` to `src/outputs/<job_id>.json`. A lack of these results results in the run receiving a score of 0.
 - Note that "generation_time" is supposed to measure the time it takes for the model to process the tokens (input prompt and reasoning+output); it excludes (model) loading times.
