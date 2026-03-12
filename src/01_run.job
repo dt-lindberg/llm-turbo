@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=Infrnc
 #SBATCH --partition=gpu_a100
-#SBATCH --time=01:00:00
+#SBATCH --time=00:10:00
 #SBATCH --gpus=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=18
