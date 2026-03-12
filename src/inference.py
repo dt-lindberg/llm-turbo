@@ -17,7 +17,7 @@ load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 MAX_SEQ_LENGTH = 2048
 MAX_TOKENS = 2000
-BATCH_SIZE = 16  # Load model weights once, generate BATCH_SIZE tokens per step
+BATCH_SIZE = 32  # Load model weights once, generate BATCH_SIZE tokens per step
 
 
 if __name__ == "__main__":
