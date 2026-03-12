@@ -9,3 +9,4 @@ b81616e	23.89	keep	FastLanguageModel + Qwen3-4B (pure text) - no vision overhead
 d142687	0.000	crash	custom loop - Unsloth needs explicit position_ids (fixed next)
 4e75e9c	0.000	crash	custom loop - Unsloth returns tuple not CausalLMOutputWithPast (fixed next)
 18b29e6	34.34	keep	custom loop with return_dict=True + position_ids - slight improvement
+2ee6b45	290.54	keep	batched inference batch_size=8 - 8.5x gain amortizing per-step overhead
