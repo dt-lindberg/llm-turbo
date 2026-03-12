@@ -5,3 +5,4 @@ f709f31	91.22	keep	Baseline: Qwen3-30B-A3B Q4_K_M GGUF via llama-cpp-python GPU 
 0dfa73c	82.20	discard	flash_attn=True: slower (model hit max_tokens=2000, FP diff changed outputs)
 4eba20f	91.55	discard	GGML_CUDA_ENABLE_GRAPHS=1: no improvement, kernel launch overhead not the binding constraint
 fa2b47f	0	crash	Qwen3-Coder-Next 80B Q3_K_M: architecture uses Gated DeltaNet (not supported in llama.cpp 0.3.16)
+61493e3	57.01	discard	GLM-4.7-Flash Q4_K_M: slower than Qwen3 baseline (different MoE/GLM arch less optimized in llama.cpp)
