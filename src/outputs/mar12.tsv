@@ -16,3 +16,4 @@ a4c6431	2271.20	keep	batch_size=64 - 1.97x more than batch=32, linear scaling co
 d37011c	4520.53	keep	batch_size=128 - 1.99x more than batch=64, still near-linear
 dd7e514	0.000	crash	batch_size=256 - OOM at ~37GB (model 1.2GB + KV cache overflow)
 a653af2	0.000	crash	batch_size=192 - OOM at ~39GB near end of generation
+00ff038	0.000	crash	batch_size=192 + expandable_segments - still genuine VRAM exhaustion

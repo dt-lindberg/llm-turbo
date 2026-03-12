@@ -20,8 +20,8 @@ load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 MAX_SEQ_LENGTH = 2048
 MAX_TOKENS = 2000
-BATCH_SIZE = 192  # Load model weights once, generate BATCH_SIZE tokens per step
-# NOTE: set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True above to reduce fragmentation
+BATCH_SIZE = 512
+MAX_TOKENS = 500  # Fewer tokens per seq → larger batch → same VRAM, more tok/s
 
 
 if __name__ == "__main__":
