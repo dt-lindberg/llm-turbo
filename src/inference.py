@@ -67,9 +67,7 @@ if __name__ == "__main__":
     generated = model.generate(
         **inputs,
         max_new_tokens=MAX_TOKENS,
-        temperature=TEMPERATURE,
-        top_p=0.95,
-        top_k=20,
+        do_sample=False,
         use_cache=True,
     )
     t_gen = time.perf_counter() - t_gen_start
