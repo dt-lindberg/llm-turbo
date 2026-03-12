@@ -62,9 +62,12 @@ c3d4e5f	0.000	crash	 custom layer caching (timeout)
 The cluster uses a Slurm workload manager. All scripts run through a `.job` file specifying partition, timeout, number of tasks and more. **You are NOT to modify this**; the research goal is to maximize performance with this setup.
 
 ### Useful commands
+All of these assume you are running from `/src`.
 * `sbatch <file>.job` for running jobs, also returns `job_id`.
 * `squeue` for checking the queue. Allows you to see when a job goes from being queued to running.
 * `jlog <job_id>` (defined in `~/.bashrc`) monitors the structured log for a running job and exits when the job finishes.
+* `python3 summarize_hw.py outputs/hw_monitor_<job_id>.csv` for a hardware utilization summary (after a run finishes).
+* `python3 evaluate.py <job_id>` for an evaluation summary of the results (after a run finished).
 
 ### Logging
 `inference.py` uses a logger (defined in `src/logger.py`) that writes structured lines — env info, model load time, generation stats — to both stdout and `src/outputs/<job_id>.log`. The raw LLM response is printed to stdout only and does not appear in the log file. Use `jlog` to monitor a run without the response flooding your context.
@@ -78,12 +81,14 @@ The experiment runs on a dedicated branch (e.g. `autoresearch/mar5`).
 2. Tune `src/inference.py` with an experimental idea by directly hacking the code.
 3. `git commit` your changes.
 4. Run the experiment: `sbatch src/01_run.job`.
-5. Monitor the run: `jlog <job_id>`, do NOT monitor or read the raw (stdout) of runs, do NOT let redundant information flood your context.
-6. Record the results in the `.tsv`.
+5. Monitor the run: `jlog <job_id>`, do NOT monitor or read the raw (stdout) of runs, do NOT let redundant information flood your context. Optionally, 
+6. Check the results in `outputs/<job_id>.json` and record them in the `.tsv` file.
 7. If the score (tokens/s) improves, you 'advance' the branch by keeping the commit.
 8. If the score (tokens/s) decreases, revert the changes you made to the code (keep record of results!).
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
+
+**GPU allocation**: If it takes a lot of time for the job to get allocated a GPU, there is NOTHING YOU CAN DO. It's the unfortunate truth, your best option is to keep running `jlog <job_id>` until it eventually gets scheduled.
 
 **Timeout**: Each experiment should take ~10 minutes total. If a run exceeds 10 minutes IT WILL CRASH.
 
