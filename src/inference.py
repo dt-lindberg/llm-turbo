@@ -5,6 +5,9 @@ import os
 import sys
 import time
 
+# Reduce CUDA allocator fragmentation — helps avoid OOM with growing KV cache
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import torch
 from dotenv import load_dotenv
 from unsloth import FastLanguageModel
@@ -18,6 +21,7 @@ HF_TOKEN = os.getenv("HF_TOKEN", None)
 MAX_SEQ_LENGTH = 2048
 MAX_TOKENS = 2000
 BATCH_SIZE = 192  # Load model weights once, generate BATCH_SIZE tokens per step
+# NOTE: set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True above to reduce fragmentation
 
 
 if __name__ == "__main__":
