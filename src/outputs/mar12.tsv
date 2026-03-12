@@ -3,3 +3,4 @@ commit	tk_s	status	description
 43a0c9c	16.89	keep	BF16 instead of 4-bit - avoids dequantization overhead
 f74c3ea	0.000	crash	vLLM - install failed (numba incompatible with Python 3.13)
 24ae333	17.19	discard	torch.compile on BF16 Unsloth - marginal gain not worth complexity
+b81616e	23.89	keep	FastLanguageModel + Qwen3-4B (pure text) - no vision overhead

@@ -1,4 +1,4 @@
-"""Run Qwen3-4B inference locally using Unsloth FastLanguageModel."""
+"""Run Qwen3-0.6B inference locally using Unsloth FastLanguageModel."""
 
 import json
 import os
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     # Load pure text model — no vision encoder overhead
     t_load_start = time.perf_counter()
     model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name="Qwen/Qwen3-4B",
+        model_name="Qwen/Qwen3-0.6B",
         max_seq_length=MAX_SEQ_LENGTH,
         load_in_4bit=False,
         token=HF_TOKEN,
