@@ -8,3 +8,5 @@ fa2b47f	0	crash	Qwen3-Coder-Next 80B Q3_K_M: architecture uses Gated DeltaNet (n
 61493e3	57.01	discard	GLM-4.7-Flash Q4_K_M: slower than Qwen3 baseline (different MoE/GLM arch less optimized in llama.cpp)
 9072503	0	crash	Speculative decoding Qwen3-0.6B draft: scores buffer overflow at n_past=511 (logits_all mismatch in llama-cpp-python)
 631e7bd	27.76	discard	Speculative decoding fixed (logits_all=True): 3x slower — MoE expert diversity with batch=6 activates all 128 experts per layer vs 8 at batch=1
+40fa88a	0	crash	Mixtral-8x7B Q4_K_M (TheBloke): old per-expert tensor naming incompatible with llama.cpp 0.3.16 (expects ffn_down_exps.weight)
+9113f09	0	crash	Mixtral-8x7B Q4_K_M (MaziyarPanahi): same naming issue — all existing Mixtral GGUFs pre-date the stacked expert rename

@@ -1,7 +1,7 @@
-"""Mixtral-8x7B-Instruct via llama-cpp-python, full GPU offload (GGUF Q4_K_M).
+"""Phi-3.5-MoE-instruct via llama-cpp-python, full GPU offload (GGUF Q4_K_M).
 
-Only 2 active experts per token (vs 8 for Qwen3-30B-A3B), so each token
-loads much less weight. Theoretical: ~250 tok/s vs 91 baseline.
+16B total, 6.6B active, 2/16 active experts. ~9GB model.
+Theoretical: ~535 tok/s vs 91 baseline (Qwen3-30B-A3B).
 """
 
 import json
@@ -19,8 +19,8 @@ from prompt import SYSTEM, USER
 load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
-REPO_ID = "MaziyarPanahi/Mixtral-8x7B-Instruct-v0.1-GGUF"
-MODEL_FILE = "Mixtral-8x7B-Instruct-v0.1.Q4_K_M.gguf"
+REPO_ID = "bartowski/Phi-3.5-MoE-instruct-GGUF"
+MODEL_FILE = "Phi-3.5-MoE-instruct-Q4_K_M.gguf"
 MAX_TOKENS = 2000
 N_CTX = 4096
 
