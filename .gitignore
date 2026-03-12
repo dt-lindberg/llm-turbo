@@ -209,5 +209,6 @@ __marimo__/
 # Other stuff
 *.csv
 *.out
+*.json
 unsloth_compiled_cache/
 
