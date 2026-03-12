@@ -36,9 +36,10 @@ if __name__ == "__main__":
     else:
         raise RuntimeError("CUDA not available")
 
-    # Find the best-fitting GGUF: Q4_K_M for ~30B models, Q3_K_M for 80B (fits 40GB GPU)
+    # Q3_K_M (35.7GB) is the largest that fits in A100 40GB for 80B models
+    # Try Q3 variants first, then fall back to smaller quantizations
     all_files = sorted(list_repo_files(REPO_ID, token=HF_TOKEN))
-    for quant in ["Q4_K_M", "Q3_K_M", "Q3_K_S", "IQ3_XS", "Q2_K"]:
+    for quant in ["Q3_K_M", "Q3_K_S", "IQ3_XS", "Q2_K"]:
         candidates = [f for f in all_files if quant in f and f.endswith(".gguf")]
         single = [f for f in candidates if "-of-" not in f]
         if single:
