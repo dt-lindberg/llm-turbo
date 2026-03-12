@@ -1,4 +1,4 @@
-"""Run Qwen3-0.6B inference locally using Unsloth FastLanguageModel."""
+"""Run Qwen3-0.6B inference with a custom generation loop (no per-token CPU sync)."""
 
 import json
 import os
@@ -15,7 +15,6 @@ from prompt import SYSTEM, USER
 load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
-TEMPERATURE = 0.6
 MAX_SEQ_LENGTH = 2048
 MAX_TOKENS = 2000
 
@@ -37,7 +36,6 @@ if __name__ == "__main__":
     else:
         raise RuntimeError("CUDA not available — model will fall back to CPU")
 
-    # Load pure text model — no vision encoder overhead
     t_load_start = time.perf_counter()
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name="Qwen/Qwen3-0.6B",
@@ -64,17 +62,27 @@ if __name__ == "__main__":
 
     log.info("Generating...")
     t_gen_start = time.perf_counter()
-    generated = model.generate(
-        **inputs,
-        max_new_tokens=MAX_TOKENS,
-        do_sample=False,
-        use_cache=True,
-    )
+
+    with torch.inference_mode():
+        # Prefill: process prompt, get first token
+        out = model(**inputs, use_cache=True)
+        past_kv = out.past_key_values
+        next_token = out.logits[:, -1:].argmax(dim=-1)  # [1,1] — stays on GPU
+        new_token_ids = [next_token]
+
+        # Decode: accumulate tokens on GPU without CPU sync
+        for _ in range(MAX_TOKENS - 1):
+            out = model(input_ids=next_token, past_key_values=past_kv, use_cache=True)
+            past_kv = out.past_key_values
+            next_token = out.logits[:, -1:].argmax(dim=-1)
+            new_token_ids.append(next_token)
+
+    torch.cuda.synchronize()  # single sync at the end
     t_gen = time.perf_counter() - t_gen_start
 
-    new_tokens = generated[0][inputs["input_ids"].shape[-1] :]
-    n_tokens = len(new_tokens)
-    response_text = tokenizer.decode(new_tokens, skip_special_tokens=True)
+    all_tokens = torch.cat(new_token_ids, dim=1).squeeze(0)
+    n_tokens = all_tokens.shape[0]
+    response_text = tokenizer.decode(all_tokens.tolist(), skip_special_tokens=True)
 
     print(response_text, flush=True)
 
