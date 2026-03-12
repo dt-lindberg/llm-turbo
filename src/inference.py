@@ -8,13 +8,15 @@ import time
 from dotenv import load_dotenv
 from unsloth import FastVisionModel
 
+from logger import get_logger
 from prompt import SYSTEM, USER
 
 load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 TEMPERATURE = 0.6  # Recommended @ https://unsloth.ai/docs/models/qwen3.5
-MAX_SEQ_LENGTH = 16384
+MAX_SEQ_LENGTH = 2000
+MAX_TOKENS = 2000
 
 
 def format_message_for_vision(messages: list[dict]) -> list[dict]:
@@ -37,6 +39,7 @@ if __name__ == "__main__":
         print("Usage: inference.py <name>", file=sys.stderr)
         sys.exit(1)
     name = sys.argv[1]
+    log = get_logger(name)
 
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
@@ -44,13 +47,10 @@ if __name__ == "__main__":
     # Sanity-check environment
     import torch
 
-    print(f"Torch version:  {torch.__version__}")
-    print(f"CUDA available: {torch.cuda.is_available()}")
+    log.info(f"Torch: {torch.__version__}  CUDA: {torch.cuda.is_available()}")
     if torch.cuda.is_available():
-        print(f"CUDA device:    {torch.cuda.get_device_name(0)}")
-        print(
-            f"VRAM:           {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB"
-        )
+        props = torch.cuda.get_device_properties(0)
+        log.info(f"GPU: {props.name}  VRAM: {props.total_memory / 1024**3:.2f} GB")
     else:
         raise RuntimeError("CUDA not available — model will fall back to CPU")
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # Enable Unsloth's native 2x faster inference
     FastVisionModel.for_inference(model)
     t_load = time.perf_counter() - t_load_start
-    print(f"Model loaded in {t_load:.2f}s", flush=True)
+    log.info(f"Model loaded in {t_load:.2f}s")
 
     messages = [
         {"role": "system", "content": SYSTEM},
@@ -83,11 +83,11 @@ if __name__ == "__main__":
         return_tensors="pt",
     ).to("cuda")
 
-    print("\nGenerating...", flush=True)
+    log.info("Generating...")
     t_gen_start = time.perf_counter()
     generated = model.generate(
         **inputs,
-        max_new_tokens=8192,
+        max_new_tokens=MAX_TOKENS,
         temperature=TEMPERATURE,
         top_p=0.95,
         top_k=20,
@@ -99,11 +99,12 @@ if __name__ == "__main__":
     n_tokens = len(new_tokens)
     response_text = tokenizer.decode(new_tokens, skip_special_tokens=True)
 
-    print(response_text, flush=True)
+    print(response_text, flush=True)  # response to stdout only
 
-    print("\n=== STATS ===\n")
-    print(f"Model load time: {t_load:.2f}s")
-    print(f"Generated {n_tokens} tokens in {t_gen:.2f}s ({n_tokens / t_gen:.2f} tok/s)")
+    log.info(
+        f"Generated {n_tokens} tokens in {t_gen:.2f}s ({n_tokens / t_gen:.2f} tok/s)"
+    )
+    log.info(f"Model load time: {t_load:.2f}s")
 
     result = {
         "total_tokens": n_tokens,

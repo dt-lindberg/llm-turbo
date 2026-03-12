@@ -3,7 +3,6 @@ You are tasked with autonomously improving the inference speed of locally hosted
 
 ## Setup
 To set up a new experiment, work with the user to:
-
 1. **Agree on a run tag**: propose a tag based on today's date (e.g. `mar5`). The branch `autoresearch/<tag>` must not already exist — this is a fresh run.
 2. **Create the branch**: `git checkout -b autoresearch/<tag>` from current main.
 3. **Read the in-scope files**: The repo is small. Read all (non-hidden) files in the `src/` directory.
@@ -64,7 +63,10 @@ The cluster uses a Slurm workload manager. All scripts run through a `.job` file
 ### Useful commands
 * `sbatch <file>.job` for running jobs, also returns `job_id`.
 * `squeue` for checking the queue. Allows you to see when a job goes from being queued to running.
-* `jtail <job_id>` (defined in `~/.bashrc`) allows you to safely monitor jobs as they're running.
+* `jlog <job_id>` (defined in `~/.bashrc`) monitors the structured log for a running job and exits when the job finishes.
+
+### Logging
+`inference.py` uses a logger (defined in `src/logger.py`) that writes structured lines — env info, model load time, generation stats — to both stdout and `src/outputs/<job_id>.log`. The raw LLM response is printed to stdout only and does not appear in the log file. Use `jlog` to monitor a run without the response flooding your context.
 
 ## The experiment loop
 The experiment runs on a dedicated branch (e.g. `autoresearch/mar5`).
@@ -75,7 +77,7 @@ The experiment runs on a dedicated branch (e.g. `autoresearch/mar5`).
 2. Tune `src/inference.py` with an experimental idea by directly hacking the code.
 3. `git commit` your changes.
 4. Run the experiment: `sbatch src/01_run.job`.
-5. Monitor the output: `jtail <job_id>` and view the results once finished.
+5. Monitor the run: `jlog <job_id>`, do NOT monitor or read the raw (stdout) of runs, do NOT let redundant information flood your context.
 6. Record the results in the `.tsv`.
 7. If the score (tokens/s) improves, you 'advance' the branch by keeping the commit.
 8. If the score (tokens/s) decreases, revert the changes you made to the code (keep record of results!).
