@@ -1,4 +1,4 @@
-"""Run Qwen3.5-4B inference locally using Unsloth."""
+"""Run Qwen3-4B inference locally using Unsloth FastLanguageModel."""
 
 import json
 import os
@@ -7,7 +7,7 @@ import time
 
 import torch
 from dotenv import load_dotenv
-from unsloth import FastVisionModel
+from unsloth import FastLanguageModel
 
 from logger import get_logger
 from prompt import SYSTEM, USER
@@ -15,24 +15,9 @@ from prompt import SYSTEM, USER
 load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
-TEMPERATURE = 0.6  # Recommended @ https://unsloth.ai/docs/models/qwen3.5
-MAX_SEQ_LENGTH = 2000
+TEMPERATURE = 0.6
+MAX_SEQ_LENGTH = 2048
 MAX_TOKENS = 2000
-
-
-def format_message_for_vision(messages: list[dict]) -> list[dict]:
-    """Convert plain-string message content to the vision-compatible format
-    (list of typed dicts) that the Qwen3.5 processor expects."""
-    formatted = []
-    for msg in messages:
-        content = msg["content"]
-        if isinstance(content, str):
-            formatted.append(
-                {"role": msg["role"], "content": [{"type": "text", "text": content}]}
-            )
-        else:
-            formatted.append(msg)
-    return formatted
 
 
 if __name__ == "__main__":
@@ -52,21 +37,15 @@ if __name__ == "__main__":
     else:
         raise RuntimeError("CUDA not available — model will fall back to CPU")
 
-    # Load model with Unsloth — BF16 for native A100 throughput
+    # Load pure text model — no vision encoder overhead
     t_load_start = time.perf_counter()
-    model, tokenizer = FastVisionModel.from_pretrained(
-        model_name="unsloth/Qwen3.5-4B",
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name="Qwen/Qwen3-4B",
         max_seq_length=MAX_SEQ_LENGTH,
         load_in_4bit=False,
         token=HF_TOKEN,
     )
-
-    # Enable Unsloth's native 2x faster inference
-    FastVisionModel.for_inference(model)
-
-    # Torch compile for additional kernel fusion / overhead reduction
-    model = torch.compile(model, mode="reduce-overhead")
-
+    FastLanguageModel.for_inference(model)
     t_load = time.perf_counter() - t_load_start
     log.info(f"Model loaded in {t_load:.2f}s")
 
@@ -74,9 +53,8 @@ if __name__ == "__main__":
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": USER},
     ]
-    vision_messages = format_message_for_vision(messages)
     input_text = tokenizer.apply_chat_template(
-        vision_messages, add_generation_prompt=True
+        messages, tokenize=False, add_generation_prompt=True
     )
     inputs = tokenizer(
         text=input_text,
@@ -100,7 +78,7 @@ if __name__ == "__main__":
     n_tokens = len(new_tokens)
     response_text = tokenizer.decode(new_tokens, skip_special_tokens=True)
 
-    print(response_text, flush=True)  # response to stdout only
+    print(response_text, flush=True)
 
     log.info(
         f"Generated {n_tokens} tokens in {t_gen:.2f}s ({n_tokens / t_gen:.2f} tok/s)"
