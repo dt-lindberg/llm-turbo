@@ -12,3 +12,4 @@ d142687	0.000	crash	custom loop - Unsloth needs explicit position_ids (fixed nex
 2ee6b45	290.54	keep	batched inference batch_size=8 - 8.5x gain amortizing per-step overhead
 6398865	588.12	keep	batch_size=16 - near-linear scaling, same step time as batch=8
 96557f0	1152.99	keep	batch_size=32 - 1.96x more than batch=16, still near-linear
+a4c6431	2271.20	keep	batch_size=64 - 1.97x more than batch=32, linear scaling continues
