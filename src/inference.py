@@ -40,6 +40,8 @@ if __name__ == "__main__":
         n_gpu_layers=-1,  # all layers on GPU
         n_ctx=N_CTX,
         flash_attn=True,
+        n_batch=512,
+        n_ubatch=512,
         verbose=False,
     )
     t_load = time.perf_counter() - t_load_start
