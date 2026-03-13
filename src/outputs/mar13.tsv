@@ -10,3 +10,4 @@ bbf73ae	80.34	keep	remove torch import - equal performance, simpler code (simpli
 0dbd079	80.37	discard	GGML_CUDA_FORCE_CUBLAS=1 - no improvement
 83e6f30	94.75	keep	flash_attn=True (new build) - 18% gain, 640 tokens generated naturally
 714b7ff	94.32	discard	flash_attn=True + n_batch=512 n_ubatch=512 - no additional gain
+7ccc6a3	75.03	discard	flash_attn=True + GGML_CUDA_DISABLE_GRAPHS=1 - much worse, graphs are essential
