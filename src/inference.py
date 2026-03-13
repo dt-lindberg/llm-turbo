@@ -18,7 +18,7 @@ HF_TOKEN = os.getenv("HF_TOKEN", None)
 MODEL_PATH = "/home/dlindberg/.cache/huggingface/hub/models--unsloth--Qwen3-30B-A3B-Instruct-2507-GGUF/snapshots/eea7b2be5805a5f151f8847ede8e5f9a9284bf77/Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf"
 
 MAX_TOKENS = 2000
-N_CTX = 4096
+N_CTX = 2048
 TEMPERATURE = 1.0
 
 if __name__ == "__main__":
@@ -32,7 +32,6 @@ if __name__ == "__main__":
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
 
-    os.environ["GGML_CUDA_FORCE_CUBLAS"] = "1"
     from llama_cpp import Llama
 
     t_load_start = time.perf_counter()
