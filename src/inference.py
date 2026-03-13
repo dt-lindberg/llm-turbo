@@ -18,7 +18,7 @@ HF_TOKEN = os.getenv("HF_TOKEN", None)
 MODEL_PATH = "/home/dlindberg/.cache/huggingface/hub/models--unsloth--Qwen3-30B-A3B-Instruct-2507-GGUF/snapshots/eea7b2be5805a5f151f8847ede8e5f9a9284bf77/Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf"
 
 MAX_TOKENS = 2000
-N_CTX = 2048
+N_CTX = 4096
 TEMPERATURE = 1.0
 
 if __name__ == "__main__":
@@ -39,6 +39,7 @@ if __name__ == "__main__":
         model_path=MODEL_PATH,
         n_gpu_layers=-1,  # all layers on GPU
         n_ctx=N_CTX,
+        n_batch=2048,
         flash_attn=True,
         verbose=False,
     )
