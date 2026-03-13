@@ -39,6 +39,7 @@ if __name__ == "__main__":
     else:
         raise RuntimeError("CUDA not available")
 
+    os.environ["GGML_CUDA_GRAPH_OPT"] = "1"
     from llama_cpp import Llama
 
     t_load_start = time.perf_counter()
