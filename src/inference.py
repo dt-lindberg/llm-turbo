@@ -1,12 +1,13 @@
-"""Run Qwen3.5-4B inference locally using Unsloth."""
+"""Qwen3-30B-A3B-Instruct-2507 via llama-cpp-python, full GPU offload (GGUF Q4_K_M)."""
 
 import json
 import os
 import sys
 import time
 
+import torch
 from dotenv import load_dotenv
-from unsloth import FastVisionModel
+from huggingface_hub import hf_hub_download, list_repo_files
 
 from logger import get_logger
 from prompt import SYSTEM, USER
@@ -14,25 +15,9 @@ from prompt import SYSTEM, USER
 load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
-TEMPERATURE = 0.6  # Recommended @ https://unsloth.ai/docs/models/qwen3.5
-MAX_SEQ_LENGTH = 2000
+REPO_ID = "unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF"
 MAX_TOKENS = 2000
-
-
-def format_message_for_vision(messages: list[dict]) -> list[dict]:
-    """Convert plain-string message content to the vision-compatible format
-    (list of typed dicts) that the Qwen3.5 processor expects."""
-    formatted = []
-    for msg in messages:
-        content = msg["content"]
-        if isinstance(content, str):
-            formatted.append(
-                {"role": msg["role"], "content": [{"type": "text", "text": content}]}
-            )
-        else:
-            formatted.append(msg)
-    return formatted
-
+N_CTX = 4096
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -44,66 +29,50 @@ if __name__ == "__main__":
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
 
-    # Sanity-check environment
-    import torch
-
-    log.info(f"Torch: {torch.__version__}  CUDA: {torch.cuda.is_available()}")
     if torch.cuda.is_available():
         props = torch.cuda.get_device_properties(0)
         log.info(f"GPU: {props.name}  VRAM: {props.total_memory / 1024**3:.2f} GB")
     else:
-        raise RuntimeError("CUDA not available — model will fall back to CPU")
+        raise RuntimeError("CUDA not available")
 
-    # Load model with Unsloth — 4-bit quantization for reduced VRAM usage
-    # Qwen3.5 is always a vision model, so we use FastVisionModel
+    # Find the Q4_K_M GGUF file (single-part preferred, else first shard)
+    all_files = sorted(list_repo_files(REPO_ID, token=HF_TOKEN))
+    q4_files = [f for f in all_files if "Q4_K_M" in f and f.endswith(".gguf")]
+    single = [f for f in q4_files if "-of-" not in f]
+    filename = single[0] if single else q4_files[0]
+    log.info(f"Downloading: {filename}")
+
+    model_path = hf_hub_download(repo_id=REPO_ID, filename=filename, token=HF_TOKEN)
+    log.info(f"Model path: {model_path}")
+
+    from llama_cpp import Llama
+
     t_load_start = time.perf_counter()
-    model, tokenizer = FastVisionModel.from_pretrained(
-        model_name="unsloth/Qwen3.5-4B",
-        max_seq_length=MAX_SEQ_LENGTH,
-        load_in_4bit=True,
-        token=HF_TOKEN,
+    llm = Llama(
+        model_path=model_path,
+        n_gpu_layers=-1,  # all layers on GPU
+        n_ctx=N_CTX,
+        verbose=False,
     )
-
-    # Enable Unsloth's native 2x faster inference
-    FastVisionModel.for_inference(model)
     t_load = time.perf_counter() - t_load_start
     log.info(f"Model loaded in {t_load:.2f}s")
 
-    messages = [
-        {"role": "system", "content": SYSTEM},
-        {"role": "user", "content": USER},
-    ]
-    vision_messages = format_message_for_vision(messages)
-    input_text = tokenizer.apply_chat_template(
-        vision_messages, add_generation_prompt=True
-    )
-    inputs = tokenizer(
-        text=input_text,
-        add_special_tokens=False,
-        return_tensors="pt",
-    ).to("cuda")
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": USER}]
 
     log.info("Generating...")
     t_gen_start = time.perf_counter()
-    generated = model.generate(
-        **inputs,
-        max_new_tokens=MAX_TOKENS,
-        temperature=TEMPERATURE,
-        top_p=0.95,
-        top_k=20,
-        use_cache=True,
+    response = llm.create_chat_completion(
+        messages=messages,
+        max_tokens=MAX_TOKENS,
+        temperature=0,
     )
     t_gen = time.perf_counter() - t_gen_start
 
-    new_tokens = generated[0][inputs["input_ids"].shape[-1] :]
-    n_tokens = len(new_tokens)
-    response_text = tokenizer.decode(new_tokens, skip_special_tokens=True)
+    n_tokens = response["usage"]["completion_tokens"]
+    response_text = response["choices"][0]["message"]["content"]
+    print(response_text, flush=True)
 
-    print(response_text, flush=True)  # response to stdout only
-
-    log.info(
-        f"Generated {n_tokens} tokens in {t_gen:.2f}s ({n_tokens / t_gen:.2f} tok/s)"
-    )
+    log.info(f"Generated {n_tokens} tokens in {t_gen:.2f}s ({n_tokens / t_gen:.2f} tok/s)")
     log.info(f"Model load time: {t_load:.2f}s")
 
     result = {
