@@ -7,3 +7,4 @@ ac4f70c	0	crash	type_k=8 type_v=8 q8_0 KV cache - unsupported type in this build
 bd18dc5	80.61	discard	GGML_CUDA_FORCE_MMQ=1 - no improvement
 bbf73ae	80.34	keep	remove torch import - equal performance, simpler code (simplification win)
 37a6692	80.22	keep	rebuild llama-cpp-python from git main (sm_80) - same perf, fresher code base
+0dbd079	80.37	discard	GGML_CUDA_FORCE_CUBLAS=1 - no improvement
