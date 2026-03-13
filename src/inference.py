@@ -35,13 +35,12 @@ if __name__ == "__main__":
     from llama_cpp import Llama
 
     t_load_start = time.perf_counter()
+    os.environ["GGML_CUDA_DISABLE_GRAPHS"] = "1"
     llm = Llama(
         model_path=MODEL_PATH,
         n_gpu_layers=-1,  # all layers on GPU
         n_ctx=N_CTX,
         flash_attn=True,
-        n_batch=512,
-        n_ubatch=512,
         verbose=False,
     )
     t_load = time.perf_counter() - t_load_start
