@@ -5,7 +5,6 @@ import os
 import sys
 import time
 
-import torch
 from dotenv import load_dotenv
 
 from logger import get_logger
@@ -33,13 +32,6 @@ if __name__ == "__main__":
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
 
-    if torch.cuda.is_available():
-        props = torch.cuda.get_device_properties(0)
-        log.info(f"GPU: {props.name}  VRAM: {props.total_memory / 1024**3:.2f} GB")
-    else:
-        raise RuntimeError("CUDA not available")
-
-    os.environ["GGML_CUDA_FORCE_MMQ"] = "1"
     from llama_cpp import Llama
 
     t_load_start = time.perf_counter()
