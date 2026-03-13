@@ -32,6 +32,7 @@ if __name__ == "__main__":
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
 
+    os.environ["GGML_CUDA_REGISTER_HOST"] = "1"
     from llama_cpp import Llama
 
     t_load_start = time.perf_counter()

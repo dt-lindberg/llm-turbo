@@ -17,3 +17,4 @@ f3332ca	94.88	discard	flash_attn=True + GGML_CUDA_FORCE_CUBLAS=1 - no improvemen
 4eef8ea	51.03	discard	LlamaPromptLookupDecoding after patching llama.py scores bug - MoE batching overhead worse than gain
 5ace154	94.66	discard	n_ctx=2048 - no improvement, attention not the bottleneck
 014248f	94.89	discard	n_batch=2048 + flash_attn - no improvement
+a466789	29.74	discard	type_k=30 type_v=30 bf16 KV cache - much worse, flash_attn doesn't support bf16 KV well
