@@ -2,3 +2,5 @@ commit	tk_s	status	description
 8dcca32	80.89	keep	baseline
 d17a2ab	81.28	discard	n_batch=512 n_ubatch=512 n_threads=16 n_threads_batch=16 - no meaningful gain
 ac4f70c	0	crash	type_k=8 type_v=8 q8_0 KV cache - unsupported type in this build, context creation failed
+7d67873	0	crash	GGML_CUDA_GRAPH_OPT=1 - context creation failed (type_k=8 leftover bug)
+381a2f5	80.82	discard	GGML_CUDA_GRAPH_OPT=1 (clean) - no improvement
