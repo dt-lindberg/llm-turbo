@@ -46,6 +46,10 @@ if __name__ == "__main__":
         model_path=MODEL_PATH,
         n_gpu_layers=-1,  # all layers on GPU
         n_ctx=N_CTX,
+        n_batch=512,
+        n_ubatch=512,
+        n_threads=16,
+        n_threads_batch=16,
         verbose=False,
     )
     t_load = time.perf_counter() - t_load_start
