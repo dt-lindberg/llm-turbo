@@ -19,7 +19,7 @@ MODEL_PATH = "/home/dlindberg/.cache/huggingface/hub/models--unsloth--Qwen3-30B-
 
 MAX_TOKENS = 2000
 N_CTX = 4096
-TEMPERATURE = 1.0
+TEMPERATURE = 0.0
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -32,7 +32,6 @@ if __name__ == "__main__":
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
 
-    os.environ["GGML_CUDA_REGISTER_HOST"] = "1"
     from llama_cpp import Llama
 
     t_load_start = time.perf_counter()
