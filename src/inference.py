@@ -32,8 +32,10 @@ if __name__ == "__main__":
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
 
-    os.environ["GGML_CUDA_FORCE_CUBLAS"] = "1"
     from llama_cpp import Llama
+    from llama_cpp.llama_speculative import LlamaPromptLookupDecoding
+
+    draft = LlamaPromptLookupDecoding(max_ngram_size=2, num_pred_tokens=2)
 
     t_load_start = time.perf_counter()
     llm = Llama(
@@ -41,6 +43,7 @@ if __name__ == "__main__":
         n_gpu_layers=-1,  # all layers on GPU
         n_ctx=N_CTX,
         flash_attn=True,
+        draft_model=draft,
         verbose=False,
     )
     t_load = time.perf_counter() - t_load_start
