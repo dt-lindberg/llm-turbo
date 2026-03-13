@@ -18,3 +18,5 @@ f3332ca	94.88	discard	flash_attn=True + GGML_CUDA_FORCE_CUBLAS=1 - no improvemen
 5ace154	94.66	discard	n_ctx=2048 - no improvement, attention not the bottleneck
 014248f	94.89	discard	n_batch=2048 + flash_attn - no improvement
 a466789	29.74	discard	type_k=30 type_v=30 bf16 KV cache - much worse, flash_attn doesn't support bf16 KV well
+f37b898	95.06	discard	GGML_CUDA_REGISTER_HOST=1 - 0.3% gain is noise
+1e208b3	82.01	discard	temperature=0 greedy - hit max_tokens (2000), longer context = slower
