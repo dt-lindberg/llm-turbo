@@ -47,8 +47,6 @@ if __name__ == "__main__":
         model_path=MODEL_PATH,
         n_gpu_layers=-1,  # all layers on GPU
         n_ctx=N_CTX,
-        type_k=8,   # q8_0 KV cache - halves KV memory vs f16
-        type_v=8,
         verbose=False,
     )
     t_load = time.perf_counter() - t_load_start
