@@ -5,7 +5,6 @@ import os
 import sys
 import time
 
-import torch
 from dotenv import load_dotenv
 
 from logger import get_logger
@@ -16,7 +15,7 @@ load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 
 # Model is already downloaded at this location
-MODEL_PATH = "/home/dlindberg/.cache/huggingface/hub/models--unsloth--Qwen3-30B-A3B-Instruct-2507-GGUF/snapshots/eea7b2be5805a5f151f8847ede8e5f9a9284bf77/Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf "
+MODEL_PATH = "/home/dlindberg/.cache/huggingface/hub/models--unsloth--Qwen3-30B-A3B-Instruct-2507-GGUF/snapshots/eea7b2be5805a5f151f8847ede8e5f9a9284bf77/Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf"
 
 MAX_TOKENS = 2000
 N_CTX = 4096
@@ -33,12 +32,6 @@ if __name__ == "__main__":
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
 
-    if torch.cuda.is_available():
-        props = torch.cuda.get_device_properties(0)
-        log.info(f"GPU: {props.name}  VRAM: {props.total_memory / 1024**3:.2f} GB")
-    else:
-        raise RuntimeError("CUDA not available")
-
     from llama_cpp import Llama
 
     t_load_start = time.perf_counter()
@@ -46,6 +39,7 @@ if __name__ == "__main__":
         model_path=MODEL_PATH,
         n_gpu_layers=-1,  # all layers on GPU
         n_ctx=N_CTX,
+        flash_attn=True,
         verbose=False,
     )
     t_load = time.perf_counter() - t_load_start
