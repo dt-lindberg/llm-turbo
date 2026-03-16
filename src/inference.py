@@ -1,4 +1,4 @@
-"""Qwen3-30B-A3B-Instruct-2507 via llama-cpp-python, full GPU offload (GGUF Q4_K_M)."""
+"""Qwen3-30B-A3B-Instruct-2507 via llama-cpp-python, batched inference."""
 
 import json
 import os
@@ -17,8 +17,9 @@ HF_TOKEN = os.getenv("HF_TOKEN", None)
 # Model is already downloaded at this location
 MODEL_PATH = "/home/dlindberg/.cache/huggingface/hub/models--unsloth--Qwen3-30B-A3B-Instruct-2507-GGUF/snapshots/eea7b2be5805a5f151f8847ede8e5f9a9284bf77/Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf"
 
+BATCH_SIZE = 16
 MAX_TOKENS = 2000
-N_CTX = 4096
+N_CTX = 4096 * BATCH_SIZE
 TEMPERATURE = 1.0
 
 if __name__ == "__main__":
@@ -39,6 +40,7 @@ if __name__ == "__main__":
         model_path=MODEL_PATH,
         n_gpu_layers=-1,  # all layers on GPU
         n_ctx=N_CTX,
+        n_parallel=BATCH_SIZE,
         flash_attn=True,
         verbose=False,
     )
@@ -50,19 +52,19 @@ if __name__ == "__main__":
         {"role": "user", "content": USER},
     ]
 
-    log.info("Generating...")
+    log.info(f"Generating batch_size={BATCH_SIZE}...")
     t_gen_start = time.perf_counter()
-    response = llm.create_chat_completion(
-        messages=messages,
-        max_tokens=MAX_TOKENS,
-        temperature=TEMPERATURE,
-    )
+    responses = [
+        llm.create_chat_completion(
+            messages=messages,
+            max_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+        )
+        for _ in range(BATCH_SIZE)
+    ]
     t_gen = time.perf_counter() - t_gen_start
 
-    n_tokens = response["usage"]["completion_tokens"]
-    response_text = response["choices"][0]["message"]["content"]
-    print(response_text, flush=True)
-
+    n_tokens = sum(r["usage"]["completion_tokens"] for r in responses)
     log.info(
         f"Generated {n_tokens} tokens in {t_gen:.2f}s ({n_tokens / t_gen:.2f} tok/s)"
     )
