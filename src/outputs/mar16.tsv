@@ -7,3 +7,4 @@ dfc5fc8	506.03	keep	batch=64 vLLM
 aa9633d	899.23	keep	batch=128 vLLM
 55b37e9	1307.23	keep	batch=256 vLLM
 7509565	0.000	crash	batch=512 — generation exceeded 10-min wall clock budget
+a4026e0	0.000	crash	batch=512 max_num_seqs=512 max_model_len=2048 — still timed out (load 240s)
