@@ -5,3 +5,4 @@ f1f38ef	412.40	keep	batch=16 vLLM (GGUF Q4_K_M) — 4.4x baseline
 e1427d1	454.92	keep	batch=32 vLLM
 dfc5fc8	506.03	keep	batch=64 vLLM
 aa9633d	899.23	keep	batch=128 vLLM
+55b37e9	1307.23	keep	batch=256 vLLM
