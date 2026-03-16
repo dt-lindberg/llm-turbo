@@ -35,8 +35,9 @@ if __name__ == "__main__":
     t_load_start = time.perf_counter()
     llm = LLM(
         model=MODEL_PATH,
-        max_model_len=4096,
-        gpu_memory_utilization=0.90,
+        max_model_len=2048,
+        max_num_seqs=BATCH_SIZE,
+        gpu_memory_utilization=0.93,
         enforce_eager=False,
     )
     t_load = time.perf_counter() - t_load_start
