@@ -1,6 +1,5 @@
 # Install for Python 3.13 and CUDA 12.8 @ https://pytorch.org/get-started/locally/
 torch==2.10.0
-torchvision==0.25.0
 accelerate==1.13.0
 vllm==0.17.0
 
