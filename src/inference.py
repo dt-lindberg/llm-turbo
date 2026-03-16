@@ -16,7 +16,7 @@ HF_TOKEN = os.getenv("HF_TOKEN", None)
 
 MODEL_PATH = "/home/dlindberg/.cache/huggingface/hub/models--unsloth--Qwen3-30B-A3B-Instruct-2507-GGUF/snapshots/eea7b2be5805a5f151f8847ede8e5f9a9284bf77/Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf"
 
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 MAX_TOKENS = 2000
 TEMPERATURE = 1.0
 
