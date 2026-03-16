@@ -1,4 +1,4 @@
-"""Qwen3-30B-A3B-Instruct-2507 via llama-cpp-python, batched inference."""
+"""Qwen3-30B-A3B-Instruct-2507 via vLLM, batched inference (GGUF Q4_K_M)."""
 
 import json
 import os
@@ -14,57 +14,53 @@ load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN", None)
 
-# Model is already downloaded at this location
 MODEL_PATH = "/home/dlindberg/.cache/huggingface/hub/models--unsloth--Qwen3-30B-A3B-Instruct-2507-GGUF/snapshots/eea7b2be5805a5f151f8847ede8e5f9a9284bf77/Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf"
 
 BATCH_SIZE = 16
 MAX_TOKENS = 2000
-N_CTX = 4096 * BATCH_SIZE
 TEMPERATURE = 1.0
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: inference.py <name>", file=sys.stderr)
         sys.exit(1)
-    # name is the Slurm job_id
     name = sys.argv[1]
     log = get_logger(name)
 
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN not set")
 
-    from llama_cpp import Llama
+    from vllm import LLM, SamplingParams
 
     t_load_start = time.perf_counter()
-    llm = Llama(
-        model_path=MODEL_PATH,
-        n_gpu_layers=-1,  # all layers on GPU
-        n_ctx=N_CTX,
-        n_parallel=BATCH_SIZE,
-        flash_attn=True,
-        verbose=False,
+    llm = LLM(
+        model=MODEL_PATH,
+        max_model_len=4096,
+        gpu_memory_utilization=0.90,
+        enforce_eager=False,
     )
     t_load = time.perf_counter() - t_load_start
     log.info(f"Model loaded in {t_load:.2f}s")
 
-    messages = [
+    tokenizer = llm.get_tokenizer()
+    chat = [
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": USER},
     ]
+    prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
+    prompts = [prompt] * BATCH_SIZE
+
+    sampling_params = SamplingParams(
+        temperature=TEMPERATURE,
+        max_tokens=MAX_TOKENS,
+    )
 
     log.info(f"Generating batch_size={BATCH_SIZE}...")
     t_gen_start = time.perf_counter()
-    responses = [
-        llm.create_chat_completion(
-            messages=messages,
-            max_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-        )
-        for _ in range(BATCH_SIZE)
-    ]
+    outputs = llm.generate(prompts, sampling_params)
     t_gen = time.perf_counter() - t_gen_start
 
-    n_tokens = sum(r["usage"]["completion_tokens"] for r in responses)
+    n_tokens = sum(len(o.outputs[0].token_ids) for o in outputs)
     log.info(
         f"Generated {n_tokens} tokens in {t_gen:.2f}s ({n_tokens / t_gen:.2f} tok/s)"
     )
