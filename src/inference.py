@@ -31,15 +31,14 @@ if __name__ == "__main__":
         raise ValueError("HF_TOKEN not set")
 
     from vllm import LLM, SamplingParams
-    from vllm.config import CompilationConfig
 
     t_load_start = time.perf_counter()
     llm = LLM(
         model=MODEL_PATH,
         max_model_len=4096,
         max_num_seqs=BATCH_SIZE,
-        gpu_memory_utilization=0.90,
-        compilation_config=CompilationConfig(cudagraph_capture_sizes=[BATCH_SIZE]),
+        gpu_memory_utilization=0.93,
+        enforce_eager=True,
     )
     t_load = time.perf_counter() - t_load_start
     log.info(f"Model loaded in {t_load:.2f}s")
