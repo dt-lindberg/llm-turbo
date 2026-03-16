@@ -3,3 +3,4 @@ commit	tk_s	status	description
 08ed35c	88.50	discard	batch=16 n_parallel llama-cpp — sequential Python loop, no real batching
 f1f38ef	412.40	keep	batch=16 vLLM (GGUF Q4_K_M) — 4.4x baseline
 e1427d1	454.92	keep	batch=32 vLLM
+dfc5fc8	506.03	keep	batch=64 vLLM
