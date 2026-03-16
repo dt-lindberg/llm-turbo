@@ -16,7 +16,7 @@ HF_TOKEN = os.getenv("HF_TOKEN", None)
 
 MODEL_PATH = "/home/dlindberg/.cache/huggingface/hub/models--unsloth--Qwen3-30B-A3B-Instruct-2507-GGUF/snapshots/eea7b2be5805a5f151f8847ede8e5f9a9284bf77/Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf"
 
-BATCH_SIZE = 256
+BATCH_SIZE = 512
 MAX_TOKENS = 2000
 TEMPERATURE = 1.0
 
@@ -31,13 +31,15 @@ if __name__ == "__main__":
         raise ValueError("HF_TOKEN not set")
 
     from vllm import LLM, SamplingParams
+    from vllm.config import CompilationConfig
 
     t_load_start = time.perf_counter()
     llm = LLM(
         model=MODEL_PATH,
         max_model_len=4096,
+        max_num_seqs=BATCH_SIZE,
         gpu_memory_utilization=0.90,
-        enforce_eager=True,
+        compilation_config=CompilationConfig(cudagraph_capture_sizes=[BATCH_SIZE]),
     )
     t_load = time.perf_counter() - t_load_start
     log.info(f"Model loaded in {t_load:.2f}s")
