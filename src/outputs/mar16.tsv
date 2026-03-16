@@ -10,3 +10,10 @@ aa9633d	899.23	keep	batch=128 vLLM
 a4026e0	0.000	crash	batch=512 max_num_seqs=512 max_model_len=2048 — still timed out (load 240s)
 acbc51f	1282.23	discard	batch=256 enforce_eager=True — slightly worse than CUDA graphs
 3d85de7	0.000	crash	batch=512 cudagraph=[512] — model loads in 210s, generation still timed out (KV preemption overhead)
+713aeb2	0.000	crash	batch=512 enforce_eager=True max_num_seqs=512 gpu_mem=0.93 — cancelled
+3a68dfa	840.35	discard	batch=384 cudagraph=[384] only — decode falls back to eager for all smaller sizes, catastrophic slowdown
+d575df4	1233.66	discard	batch=384 default CUDA graphs — 1→384 coverage, but still worse than 256 (KV pressure)
+20b31f7	1330.18	keep	batch=288 default CUDA graphs — beats 256
+f632d7b	1348.88	keep	batch=336 default CUDA graphs — beats 288; peak between 336 and 384
+fbb4a29	1358.62	keep	batch=352 default CUDA graphs — new peak
+aff1eb8	1344.04	discard	batch=368 default CUDA graphs — drops off; peak confirmed at 352
