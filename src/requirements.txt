@@ -1,6 +1,9 @@
-# Minimal requirements for llama-cpp-python inference
-python-dotenv==1.2.2
+# Install for Python 3.13 and CUDA 12.8 @ https://pytorch.org/get-started/locally/
+torch==2.10.0
+accelerate==1.13.0
+vllm==0.17.0
 
-# Build from git source to get post-0.3.16 optimizations (GGML_CUDA_GRAPH_OPT, etc.)
-# CMAKE_ARGS must be set in environment: -DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=80
-llama-cpp-python @ git+https://github.com/abetlen/llama-cpp-python.git@main
+# Compatible with Python 3.13, pytorch 2.10.0, and vLLM 0.17
+transformers==4.57.6
+
+python-dotenv==1.2.2
