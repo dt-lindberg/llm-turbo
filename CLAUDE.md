@@ -16,23 +16,25 @@ Each experiment runs on a single Nvidia A100 (40GB) GPU with access to 16 CPU co
 * Note: sometimes it takes a bit of time for the job to *actually start*, as there might be a queue for the GPUs. This does NOT count towards the 10 minutes.
 
 ### What you CAN do
-- Modify `src/inference.py` — this is the only file you edit. Everything is fair game: choice of model (must fit on provided GPU), inference provider (plain HuggingFace/Unsloth/vLLM), hyperparameters, existing or custom optimizations like flash-attention-2, etc.
+- Modify `src/inference.py` — this is the only file you edit. The focus of this experiment series is **batching**: run multiple copies of the prompt in parallel (batch sizes 16, 32, 64, 128) and measure aggregate throughput. Everything is fair game: batching strategy, inference provider (plain HuggingFace/vLLM/etc.), hyperparameters, flash-attention-2, continuous batching, etc.
 - Install new dependencies (**15 minute limit!**). Just update `src/requirements.txt` and sbatch `src/00_install_env.job`. Make sure to not let pip use cached packages and be careful with dependencies overwriting existing versions.
 - Search the web for (recent) information and documentation.
 
 ### What you CANNOT do
-- Change the prompt the LLMs are running on. It is defined in `src/prompt.py` changing this file disqualifies a run.
+- Change the prompt the LLMs are running on. It is defined in `src/prompt.py` — changing this file disqualifies a run. You may replicate it N times to form a batch.
 - Modify the evaluation harness. **Every run must write** `{"total_tokens": int, "generation_time": float, "tokens_per_second": float}` to `src/outputs/<job_id>.json`. A lack of these results results in the run receiving a score of 0.
-- Note that "generation_time" is supposed to measure the time it takes for the model to process the tokens (input prompt and reasoning+output); it excludes (model) loading times.
+- Note that "generation_time" is supposed to measure the time it takes for the model to process the tokens (input prompt and reasoning+output) **across the entire batch**; it excludes (model) loading times.
 
-**The goal is simple**: Get the highest score possible, where the score is defined as "tokens_per_second".
+**The goal**: Maximize **aggregate throughput** — `total_tokens / generation_time` — where `total_tokens` is the sum of all tokens generated across every item in the batch. This is the score.
+
+For example: a single request that generates 6 000 tokens in 60 s scores 100 tk/s. Four requests processed as a batch that together generate 24 000 tokens in 60 s scores 400 tk/s — four times better. Scaling batch size is the primary lever here.
 
 **Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. 
 * One more token/second that adds 40 lines of hacky code => probably not worth it.
 * One more token/second from deleting code and/or dependencies => definitely keep.
 * No improvement but much simpler code and/or dependencies => definitely keep.
 
-**The first run**: Your very first run should always be to establish the baseline, so you will run the training script as is.
+**The first run**: Your very first run should always be to establish the baseline — run the existing script with a single prompt (batch size 1) so you have a reference point before exploring larger batch sizes.
 
 ## Output format
 After each run, a new file will be created in `src/outputs/<job_id>.json` that summarizes the results. It will be displayed at the end of a run.
@@ -52,10 +54,10 @@ commit	tk_s	status	description
 Example:
 ```
 commit	tk_s	status	description
-a1b2c3d	12.23	keep	baseline
-c3d4ef1	14.72	keep	used flash-attention-2
-d8e7c1a	26.23	keep	changed to vLLM inference
-c3d4e5f	0.000	crash	 custom layer caching (timeout)
+a1b2c3d	98.45	keep	baseline (batch=1)
+c3d4ef1	187.23	keep	batch=16 with vLLM
+d8e7c1a	341.80	keep	batch=32 continuous batching
+c3d4e5f	0.000	crash	batch=128 OOM
 ```
 
 ## Interacting with the GPU
